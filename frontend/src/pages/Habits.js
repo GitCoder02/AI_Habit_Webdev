@@ -1,0 +1,131 @@
+// frontend/src/pages/Habits.js
+import { useState, useEffect } from "react";
+import Card from "../components/Card";
+import api from "../api";
+
+export default function Habits() {
+  const categoryOptions = ["Health", "Fitness", "Mindfulness", "Learning", "Work", "Other"];
+
+  const [habits, setHabits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newHabit, setNewHabit] = useState("");
+  const [newCategory, setNewCategory] = useState(categoryOptions[0]);
+  const [newDescription, setNewDescription] = useState("");
+
+  useEffect(() => {
+    const fetchHabits = async () => {
+      try {
+        const res = await api.get("/habits");
+        setHabits(res.data);
+        setLoading(false);
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+      }
+    };
+    fetchHabits();
+  }, []);
+
+  const handleAddHabit = async (e) => {
+    e.preventDefault();
+    if (!newHabit.trim()) return;
+
+    try {
+      const res = await api.post("/habits", {
+        name: newHabit,
+        description: newDescription,
+        category: newCategory,
+      });
+      setHabits([...habits, res.data]);
+      setNewHabit("");
+      setNewDescription("");
+      setNewCategory(categoryOptions[0]);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add habit");
+    }
+  };
+
+  const toggleHabit = async (id) => {
+    try {
+      const res = await api.put(`/habits/${id}/toggle`);
+      setHabits(habits.map((habit) => (habit._id === id ? res.data : habit)));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update habit");
+    }
+  };
+
+  if (loading) return <p className="p-6">Loading habits...</p>;
+
+  return (
+    <div className="bg-gray-100 min-h-screen p-6 space-y-6">
+      <h1 className="text-3xl font-bold text-gray-800">Your Habits</h1>
+      <p className="text-gray-500 mb-4">Build consistency, one day at a time 🪴</p>
+
+      {/* Add New Habit */}
+      <Card title="Add New Habit">
+        <form onSubmit={handleAddHabit} className="space-y-3">
+          <input
+            type="text"
+            placeholder="Habit name"
+            value={newHabit}
+            onChange={(e) => setNewHabit(e.target.value)}
+            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+          />
+          <input
+            type="text"
+            placeholder="Description"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+          />
+          <select
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+          >
+            {categoryOptions.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded font-semibold transition-all"
+          >
+            Add Habit
+          </button>
+        </form>
+      </Card>
+
+      {/* Habit List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {habits.map((habit) => (
+          <Card
+            key={habit._id}
+            title={habit.name}
+            className="hover:shadow-lg transition-shadow relative"
+          >
+            <p className="text-gray-700 mb-2">{habit.description}</p>
+            <p className="text-sm text-gray-500 mb-2">Category: {habit.category}</p>
+            <p className="text-sm text-gray-500 mb-2 flex items-center space-x-2">
+              <span>Current Streak:</span>
+              <span className="font-bold animate-pulse">{habit.streak}</span>
+              <span>| Best Streak: <span className="font-bold">{habit.bestStreak}</span></span>
+            </p>
+            <button
+              onClick={() => toggleHabit(habit._id)}
+              className={`px-4 py-2 rounded text-white w-full font-semibold transition-all
+                ${habit.completedToday 
+                  ? "bg-gray-400 cursor-not-allowed" 
+                  : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"}`
+              }
+            >
+              {habit.completedToday ? "Completed" : "Complete"}
+            </button>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

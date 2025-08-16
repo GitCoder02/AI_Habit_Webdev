@@ -1,0 +1,28 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# dotenv environment variables
+.env
+**/.env
+
+# Build output
+build/
+dist/
+coverage/
+
+# Misc
+.DS_Store
+Thumbs.db
+
+# VSCode settings
+.vscode/
+
+# Production files
+*.local
