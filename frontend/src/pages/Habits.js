@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import api from "../api";
+import { FaCheckCircle } from 'react-icons/fa';
 
 export default function Habits() {
   const categoryOptions = ["Health", "Fitness", "Mindfulness", "Learning", "Work", "Other"];
@@ -59,7 +60,7 @@ export default function Habits() {
   if (loading) return <p className="p-6">Loading habits...</p>;
 
   return (
-    <div className="bg-gray-100 min-h-screen p-6 space-y-6">
+    <div className="bg-light-gray-bg min-h-screen p-6 space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Your Habits</h1>
       <p className="text-gray-500 mb-4">Build consistency, one day at a time 🪴</p>
 
@@ -71,19 +72,19 @@ export default function Habits() {
             placeholder="Habit name"
             value={newHabit}
             onChange={(e) => setNewHabit(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           />
           <input
             type="text"
             placeholder="Description"
             value={newDescription}
             onChange={(e) => setNewDescription(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           />
           <select
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           >
             {categoryOptions.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
@@ -91,7 +92,7 @@ export default function Habits() {
           </select>
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded font-semibold transition-all"
+            className="w-full bg-mint-green hover:bg-mint-green-600 text-white px-4 py-2 rounded font-semibold transition-all"
           >
             Add Habit
           </button>
@@ -107,21 +108,25 @@ export default function Habits() {
             className="hover:shadow-lg transition-shadow relative"
           >
             <p className="text-gray-700 mb-2">{habit.description}</p>
-            <p className="text-sm text-gray-500 mb-2">Category: {habit.category}</p>
-            <p className="text-sm text-gray-500 mb-2 flex items-center space-x-2">
-              <span>Current Streak:</span>
-              <span className="font-bold animate-pulse">{habit.streak}</span>
-              <span>| Best Streak: <span className="font-bold">{habit.bestStreak}</span></span>
-            </p>
+            <span className="inline-block bg-mint-green-100 text-mint-green text-xs px-2 py-1 rounded-full">{habit.category}</span>
+            <div className="flex items-center space-x-2 mt-2">
+              <span className="text-energetic-orange">🔥</span>
+              <span className="font-bold text-mint-green">{habit.streak}</span>
+              <span className="text-gray-500">Current</span>
+              <span className="font-bold text-energetic-orange">{habit.bestStreak}</span>
+              <span className="text-gray-500">Best</span>
+            </div>
             <button
               onClick={() => toggleHabit(habit._id)}
-              className={`px-4 py-2 rounded text-white w-full font-semibold transition-all
+              className={`px-4 py-2 rounded text-white w-full font-semibold transition-all mt-4 flex items-center justify-center space-x-2
                 ${habit.completedToday 
-                  ? "bg-gray-400 cursor-not-allowed" 
-                  : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"}`
+                  ? "bg-subtle-gray cursor-not-allowed" 
+                  : "bg-mint-green hover:bg-mint-green-600"}`
               }
+              disabled={habit.completedToday}
             >
-              {habit.completedToday ? "Completed" : "Complete"}
+              <FaCheckCircle />
+              <span>Complete</span>
             </button>
           </Card>
         ))}

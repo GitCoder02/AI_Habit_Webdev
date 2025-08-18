@@ -25,7 +25,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
+    <div className="flex justify-center items-center h-screen bg-light-gray-bg">
       <form
         onSubmit={handleSignup}
         className="bg-white p-6 rounded shadow-md w-80 space-y-4"
@@ -34,27 +34,27 @@ export default function Signup() {
         <input
           type="text"
           placeholder="Name"                    // ✅ Added name input
-          className="border p-2 w-full"
+          className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <input
           type="email"
           placeholder="Email"
-          className="border p-2 w-full"
+          className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <input
           type="password"
           placeholder="Password"
-          className="border p-2 w-full"
+          className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <button
           type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded w-full"
+          className="w-full bg-mint-green text-white px-4 py-2 rounded font-semibold hover:bg-mint-green-600"
         >
           Signup
         </button>

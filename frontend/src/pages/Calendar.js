@@ -4,12 +4,12 @@ import Card from "../components/Card";
 import api from "../api";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 
-// Define category colors
+// Define category colors based on the UI image
 const categoryColors = {
-  Work: "bg-blue-300",
-  Learning: "bg-purple-300",
-  Fitness: "bg-green-300",
-  Health: "bg-red-300",
+  Work: "bg-pastel-blue",
+  Learning: "bg-pastel-purple",
+  Fitness: "bg-pastel-teal",
+  Health: "bg-pastel-pink",
   Mindfulness: "bg-yellow-300",
   Other: "bg-gray-300",
 };
@@ -65,8 +65,11 @@ export default function Calendar() {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen space-y-6">
-      <Card title="Smart Calendar">
+    <div className="p-6 bg-light-gray-bg min-h-screen space-y-6">
+      <h1 className="text-3xl font-bold text-gray-800">Smart Calendar</h1>
+      <p className="text-gray-500 mb-4">AI-powered time insights and energy optimization</p>
+      
+      <Card>
         {/* Week Header */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2">
@@ -76,9 +79,9 @@ export default function Calendar() {
             </h3>
           </div>
           <div className="space-x-2">
-            <button onClick={() => navigateWeek(-1)} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Previous</button>
-            <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600">Today</button>
-            <button onClick={() => navigateWeek(1)} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Next</button>
+            <button onClick={() => navigateWeek(-1)} className="px-3 py-1 rounded bg-subtle-gray hover:bg-gray-300">Previous</button>
+            <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 rounded bg-mint-green text-white hover:bg-mint-green-600">Today</button>
+            <button onClick={() => navigateWeek(1)} className="px-3 py-1 rounded bg-subtle-gray hover:bg-gray-300">Next</button>
           </div>
         </div>
 
@@ -89,7 +92,7 @@ export default function Calendar() {
               key={day}
               onClick={() => setSelectedDate(day)}
               className={`p-2 rounded cursor-pointer text-center
-                ${isSameDay(day, new Date()) ? "bg-green-500 text-white" : "bg-gray-50 hover:bg-gray-100"}`}
+                ${isSameDay(day, new Date()) ? "bg-mint-green text-white" : "bg-white hover:bg-gray-100"}`}
             >
               <div className="font-bold">{format(day, "dd")}</div>
               <div className="text-sm">{format(day, "EEE")}</div>
@@ -117,21 +120,21 @@ export default function Calendar() {
           <input
             type="text"
             placeholder="Event Title"
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
           <input
             type="text"
             placeholder="Description"
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
             value={description}
             onChange={e => setDescription(e.target.value)}
           />
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           >
             {categoryOptions.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
@@ -139,11 +142,41 @@ export default function Calendar() {
           </select>
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded font-semibold transition-all"
+            className="w-full bg-mint-green hover:bg-mint-green-600 text-white px-4 py-2 rounded font-semibold transition-all"
           >
             Add Event
           </button>
         </form>
+      </Card>
+      
+      {/* Energy Insights */}
+      <Card title="Energy Insights">
+        <div className="space-y-4">
+          <div className="flex items-start space-x-3 p-3 rounded-md bg-energetic-orange text-white">
+            <span className="material-icons text-2xl">schedule</span>
+            <div>
+                <h3 className="font-bold">Peak Hours</h3>
+                <p className="text-sm">9 AM - 11 AM</p>
+                <p className="text-xs">Schedule deep work here</p>
+            </div>
+          </div>
+          <div className="flex items-start space-x-3 p-3 rounded-md bg-mint-green text-white">
+            <span className="material-icons text-2xl">insights</span>
+            <div>
+              <h3 className="font-bold">Focus Time</h3>
+              <p className="text-sm">4.5 hours</p>
+              <p className="text-xs">Today's planned focus</p>
+            </div>
+          </div>
+          <div className="flex items-start space-x-3 p-3 rounded-md bg-pastel-purple text-white">
+            <span className="material-icons text-2xl">bolt</span>
+            <div>
+              <h3 className="font-bold">Break Reminder</h3>
+              <p className="text-sm">Every 90 minutes</p>
+              <p className="text-xs">Maintain productivity</p>
+            </div>
+          </div>
+        </div>
       </Card>
     </div>
   );

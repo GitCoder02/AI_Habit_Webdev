@@ -22,7 +22,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+    <div className="flex justify-center items-center min-h-screen bg-light-gray-bg">
       <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-lg space-y-6">
         <h1 className="text-2xl font-bold text-center text-gray-800">Welcome Back! 👋</h1>
         <p className="text-center text-gray-500">
@@ -35,7 +35,7 @@ export default function Login() {
             <input
               type="email"
               placeholder="you@example.com"
-              className="border p-3 w-full rounded-md focus:ring-2 focus:ring-green-500 outline-none"
+              className="border border-subtle-gray p-3 w-full rounded-md focus:ring-2 focus:ring-mint-green outline-none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -47,7 +47,7 @@ export default function Login() {
             <input
               type="password"
               placeholder="********"
-              className="border p-3 w-full rounded-md focus:ring-2 focus:ring-green-500 outline-none"
+              className="border border-subtle-gray p-3 w-full rounded-md focus:ring-2 focus:ring-mint-green outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -56,14 +56,14 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full bg-green-600 text-white p-3 rounded-md hover:bg-green-700 font-semibold"
+            className="w-full bg-mint-green text-white p-3 rounded-md hover:bg-mint-green-600 font-semibold"
           >
             Log In
           </button>
         </form>
 
         <p className="text-center text-gray-500 text-sm">
-          Don’t have an account? <a href="/signup" className="text-green-600 hover:underline">Sign Up</a>
+          Don’t have an account? <a href="/signup" className="text-mint-green hover:underline">Sign Up</a>
         </p>
       </div>
     </div>

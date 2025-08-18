@@ -2,12 +2,18 @@
 import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import api from "../api";
+import { FaCheckCircle } from 'react-icons/fa';
 
 export default function Goals() {
   const [goals, setGoals] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetDate, setTargetDate] = useState("");
+  const [milestones, setMilestones] = useState([
+    { text: "Complete Python basics course", completed: true },
+    { text: "Build a calculator app", completed: true },
+    { text: "Learn about data structures", completed: false }
+  ]);
 
   // Fetch user goals from backend
   const fetchGoals = async () => {
@@ -45,7 +51,7 @@ export default function Goals() {
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen p-6 space-y-6">
+    <div className="bg-light-gray-bg min-h-screen p-6 space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Your Goals</h1>
       <p className="text-gray-500 mb-4">Set meaningful goals and track progress 🚀</p>
 
@@ -57,24 +63,24 @@ export default function Goals() {
             placeholder="Goal Title"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           />
           <input
             type="text"
             placeholder="Description"
             value={description}
             onChange={e => setDescription(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           />
           <input
             type="date"
             value={targetDate}
             onChange={e => setTargetDate(e.target.value)}
-            className="border p-2 w-full rounded focus:ring-2 focus:ring-green-400 outline-none"
+            className="border border-subtle-gray p-2 w-full rounded focus:ring-2 focus:ring-mint-green outline-none"
           />
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded font-semibold transition-all"
+            className="w-full bg-mint-green hover:bg-mint-green-600 text-white px-4 py-2 rounded font-semibold transition-all"
           >
             Add Goal
           </button>
@@ -88,27 +94,37 @@ export default function Goals() {
             <p className="text-gray-700 mb-2">{goal.description}</p>
             <p className="text-sm text-gray-500 mb-2">Target Date: {goal.targetDate ? new Date(goal.targetDate).toLocaleDateString() : "N/A"}</p>
             
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={goal.progress}
-              onChange={e => handleUpdateGoal(goal._id, Number(e.target.value), goal.isCompleted)}
-              className="w-full mb-2 accent-green-500"
-            />
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-semibold">{goal.progress}%</span>
+            <div className="w-full h-2 bg-subtle-gray rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-energetic-orange transition-all duration-500" 
+                  style={{ width: `${goal.progress}%` }}
+                ></div>
+            </div>
+
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm font-semibold text-energetic-orange">{goal.progress}%</span>
               <button
                 className={`px-3 py-1 rounded font-semibold transition-all ${
                   goal.isCompleted
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                    ? "bg-subtle-gray cursor-not-allowed"
+                    : "bg-mint-green hover:bg-mint-green-600 text-white"
                 }`}
                 onClick={() => handleUpdateGoal(goal._id, goal.progress, !goal.isCompleted)}
               >
                 {goal.isCompleted ? "Completed" : "Mark Complete"}
               </button>
             </div>
+
+            {/* Recent Milestones (as per UI image) */}
+            <h3 className="text-sm font-semibold mt-4 mb-2">Recent Milestones</h3>
+            <ul className="space-y-1">
+              {milestones.map((milestone, index) => (
+                <li key={index} className="flex items-center space-x-2">
+                  <span className={`w-2 h-2 rounded-full ${milestone.completed ? 'bg-mint-green' : 'bg-subtle-gray'}`}></span>
+                  <span className="text-sm text-gray-700">{milestone.text}</span>
+                </li>
+              ))}
+            </ul>
           </Card>
         ))}
       </div>
