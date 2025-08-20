@@ -1,24 +1,24 @@
+// frontend/src/context/AuthContext.js
 import { createContext, useContext, useState, useEffect } from "react";
-import api from "../api"; // use your axios instance
+import api, { authApi } from "../api";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || null);
-  const [loading, setLoading] = useState(true); // track loading state
+  const [loading, setLoading] = useState(true);
 
-  // On mount, fetch user info if token exists
+  // fetch user if token exists
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) {
         setLoading(false);
         return;
       }
-
       try {
-        const res = await api.get("/me"); // GET /api/me
-        setUser(res.data); // real user info from backend
+        const res = await authApi.fetchMe();
+        setUser(res.data);
       } catch (err) {
         console.error("Failed to fetch user:", err);
         localStorage.removeItem("token");
@@ -28,7 +28,6 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     };
-
     fetchUser();
   }, [token]);
 
@@ -42,16 +41,24 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    // optional: inform backend to invalidate refresh token if implemented
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, isAuthenticated: !!token, loading }}
+      value={{
+        user,
+        setUser,
+        token,
+        login,
+        logout,
+        isAuthenticated: !!token,
+        loading,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook for easy use
 export const useAuth = () => useContext(AuthContext);

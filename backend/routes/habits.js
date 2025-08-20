@@ -3,49 +3,78 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const Habit = require('../models/Habit');
 
-// Get all habits for logged-in user
-router.get('/', auth, async (req, res) => {
-  try {
-    const habits = await Habit.find({ userId: req.user.id });
-    res.json(habits);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-});
-
-// Add a new habit
+// ✅ Create a new habit
 router.post('/', auth, async (req, res) => {
-  const { name, description, category } = req.body;
   try {
-    const habit = await Habit.create({
+    const { name, description, category } = req.body;
+
+    const habit = new Habit({
       userId: req.user.id,
       name,
       description,
       category,
     });
-    res.status(201).json(habit);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-});
 
-// Toggle habit completion
-router.put('/:id/toggle', auth, async (req, res) => {
-  try {
-    const habit = await Habit.findById(req.params.id);
-    if (!habit || habit.userId.toString() !== req.user.id) {
-      return res.status(404).json({ msg: 'Habit not found' });
-    }
-    habit.completedToday = !habit.completedToday;
-    habit.streak = habit.completedToday ? habit.streak + 1 : habit.streak - 1;
-    if (habit.streak > habit.bestStreak) habit.bestStreak = habit.streak;
     await habit.save();
     res.json(habit);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ✅ Get all habits of logged-in user
+router.get('/', auth, async (req, res) => {
+  try {
+    const habits = await Habit.find({ userId: req.user.id });
+    res.json(habits);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ✅ Update a habit
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { name, description, category, completedToday } = req.body;
+
+    let habit = await Habit.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!habit) return res.status(404).json({ msg: 'Habit not found' });
+
+    habit.name = name || habit.name;
+    habit.description = description || habit.description;
+    habit.category = category || habit.category;
+
+    // Update streak logic if user marks completedToday
+    if (completedToday !== undefined) {
+      if (completedToday && !habit.completedToday) {
+        habit.streak += 1;
+        if (habit.streak > habit.bestStreak) habit.bestStreak = habit.streak;
+      } else if (!completedToday && habit.completedToday) {
+        habit.streak = Math.max(0, habit.streak - 1);
+      }
+      habit.completedToday = completedToday;
+    }
+
+    await habit.save();
+    res.json(habit);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ✅ Delete a habit
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const habit = await Habit.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!habit) return res.status(404).json({ msg: 'Habit not found' });
+
+    res.json({ msg: 'Habit removed' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 

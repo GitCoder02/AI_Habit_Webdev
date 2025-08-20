@@ -10,6 +10,7 @@ const protectedRoutes = require('./routes/protected');
 const habitRoutes = require('./routes/habits');
 const goalsRoutes = require('./routes/goals');
 const eventsRoutes = require('./routes/events');
+const googleRoutes = require('./routes/google'); // Google Calendar routes
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api', protectedRoutes);
 app.use('/api/habits', habitRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/google', googleRoutes); // Google Calendar routes
 app.get('/', (_req, res) => res.send('Habit Coach API (Phase 1)'));
 
 // Start

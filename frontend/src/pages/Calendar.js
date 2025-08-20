@@ -1,10 +1,8 @@
-// frontend/src/pages/Calendar.js
 import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import api from "../api";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 
-// Define category colors based on the UI image
 const categoryColors = {
   Work: "bg-pastel-blue",
   Learning: "bg-pastel-purple",
@@ -12,18 +10,21 @@ const categoryColors = {
   Health: "bg-pastel-pink",
   Mindfulness: "bg-yellow-300",
   Other: "bg-gray-300",
+  Google: "bg-orange-300",
 };
 
-export default function Calendar() {
+export default function Calendar({ userId }) {
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Work");
+  const [googleConnected, setGoogleConnected] = useState(false);
 
   const categoryOptions = ["Work", "Learning", "Fitness", "Health", "Mindfulness", "Other"];
 
+  // Fetch local events
   const fetchEvents = async () => {
     try {
       const res = await api.get("/events");
@@ -33,13 +34,42 @@ export default function Calendar() {
     }
   };
 
+  // Fetch Google events
+  const fetchGoogleEvents = async () => {
+    try {
+      const res = await api.get(`/google/events?userId=${userId}`);
+      if (res.data?.length > 0) {
+        const googleEvents = res.data.map(ev => ({
+          _id: ev.id,
+          title: ev.summary || "Untitled",
+          description: ev.description || "",
+          start: ev.start.dateTime || ev.start.date,
+          end: ev.end.dateTime || ev.end.date,
+          category: "Google",
+        }));
+
+        setEvents(prev => [
+          ...prev.filter(e => e.category !== "Google"),
+          ...googleEvents
+        ]);
+      }
+      setGoogleConnected(true);
+    } catch (err) {
+      console.error("Failed to fetch Google events:", err);
+      setGoogleConnected(false);
+    }
+  };
+
   useEffect(() => {
+    if (!userId) return; // Don't fetch if userId is missing
     fetchEvents();
-  }, []);
+    fetchGoogleEvents();
+  }, [userId]);
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+
     try {
       const res = await api.post("/events", {
         title,
@@ -57,18 +87,54 @@ export default function Calendar() {
     }
   };
 
-  const startWeek = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
-  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startWeek, i));
+  const handleConnectGoogle = async () => {
+    if (!userId) {
+      alert("User ID not found. Please log in again.");
+      return;
+    }
 
-  const navigateWeek = (dir) => {
-    setCurrentDate(addDays(currentDate, dir * 7));
+    try {
+      const res = await api.get(`/google/auth-url?userId=${userId}`);
+      const authWindow = window.open(res.data.url, "_blank", "width=500,height=600");
+
+      const timer = setInterval(async () => {
+        if (!authWindow || authWindow.closed) {
+          clearInterval(timer);
+          return;
+        }
+
+        try {
+          const check = await api.get(`/google/events?userId=${userId}`);
+          if (check.status === 200) {
+            fetchGoogleEvents();
+            clearInterval(timer);
+            authWindow.close();
+          }
+        } catch {}
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to get Google auth URL:", err);
+    }
   };
+
+  const startWeek = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startWeek, i));
+  const navigateWeek = (dir) => setCurrentDate(addDays(currentDate, dir * 7));
 
   return (
     <div className="p-6 bg-light-gray-bg min-h-screen space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Smart Calendar</h1>
       <p className="text-gray-500 mb-4">AI-powered time insights and energy optimization</p>
-      
+
+      {!googleConnected && (
+        <button
+          onClick={handleConnectGoogle}
+          className="mb-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Connect Google Calendar
+        </button>
+      )}
+
       <Card>
         {/* Week Header */}
         <div className="flex justify-between items-center mb-4">
@@ -87,8 +153,8 @@ export default function Calendar() {
 
         {/* Week Days */}
         <div className="grid grid-cols-7 gap-2 mb-4">
-          {weekDays.map((day) => (
-            <div 
+          {weekDays.map(day => (
+            <div
               key={day}
               onClick={() => setSelectedDate(day)}
               className={`p-2 rounded cursor-pointer text-center
@@ -107,12 +173,11 @@ export default function Calendar() {
             .map(ev => (
               <div key={ev._id} className={`p-2 rounded text-gray-800 ${categoryColors[ev.category] || "bg-gray-200"}`}>
                 <div className="font-bold">{ev.title}</div>
-                <div className="text-sm">{new Date(ev.start).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}</div>
+                <div className="text-sm">{new Date(ev.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 <div className="text-sm">{ev.description}</div>
                 <div className="text-xs mt-1 font-semibold">{ev.category}</div>
               </div>
-            ))
-          }
+            ))}
         </div>
 
         {/* Add Event Form */}
@@ -147,36 +212,6 @@ export default function Calendar() {
             Add Event
           </button>
         </form>
-      </Card>
-      
-      {/* Energy Insights */}
-      <Card title="Energy Insights">
-        <div className="space-y-4">
-          <div className="flex items-start space-x-3 p-3 rounded-md bg-energetic-orange text-white">
-            <span className="material-icons text-2xl">schedule</span>
-            <div>
-                <h3 className="font-bold">Peak Hours</h3>
-                <p className="text-sm">9 AM - 11 AM</p>
-                <p className="text-xs">Schedule deep work here</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3 p-3 rounded-md bg-mint-green text-white">
-            <span className="material-icons text-2xl">insights</span>
-            <div>
-              <h3 className="font-bold">Focus Time</h3>
-              <p className="text-sm">4.5 hours</p>
-              <p className="text-xs">Today's planned focus</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3 p-3 rounded-md bg-pastel-purple text-white">
-            <span className="material-icons text-2xl">bolt</span>
-            <div>
-              <h3 className="font-bold">Break Reminder</h3>
-              <p className="text-sm">Every 90 minutes</p>
-              <p className="text-xs">Maintain productivity</p>
-            </div>
-          </div>
-        </div>
       </Card>
     </div>
   );

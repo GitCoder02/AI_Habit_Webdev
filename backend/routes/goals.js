@@ -3,49 +3,69 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const Goal = require('../models/Goal');
 
-// Get all goals for logged-in user
-router.get('/', auth, async (req, res) => {
-  try {
-    const goals = await Goal.find({ userId: req.user.id });
-    res.json(goals);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-});
-
-// Add a new goal
+// ✅ Create a new goal
 router.post('/', auth, async (req, res) => {
-  const { title, description, targetDate } = req.body;
   try {
-    const goal = await Goal.create({
+    const { title, description, targetDate } = req.body;
+
+    const goal = new Goal({
       userId: req.user.id,
       title,
       description,
       targetDate,
     });
-    res.status(201).json(goal);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-});
 
-// Update goal progress or completion
-router.put('/:id', auth, async (req, res) => {
-  const { progress, isCompleted } = req.body;
-  try {
-    const goal = await Goal.findById(req.params.id);
-    if (!goal || goal.userId.toString() !== req.user.id) {
-      return res.status(404).json({ msg: 'Goal not found' });
-    }
-    if (progress !== undefined) goal.progress = progress;
-    if (isCompleted !== undefined) goal.isCompleted = isCompleted;
     await goal.save();
     res.json(goal);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ✅ Get all goals of logged-in user
+router.get('/', auth, async (req, res) => {
+  try {
+    const goals = await Goal.find({ userId: req.user.id });
+    res.json(goals);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ✅ Update a goal
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { title, description, targetDate, progress, isCompleted } = req.body;
+
+    let goal = await Goal.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!goal) return res.status(404).json({ msg: 'Goal not found' });
+
+    goal.title = title || goal.title;
+    goal.description = description || goal.description;
+    goal.targetDate = targetDate || goal.targetDate;
+    goal.progress = progress !== undefined ? progress : goal.progress;
+    goal.isCompleted = isCompleted !== undefined ? isCompleted : goal.isCompleted;
+
+    await goal.save();
+    res.json(goal);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ✅ Delete a goal
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const goal = await Goal.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!goal) return res.status(404).json({ msg: 'Goal not found' });
+
+    res.json({ msg: 'Goal removed' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 

@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import api from "../api";
-import { FaCheckCircle } from 'react-icons/fa';
 
 export default function Goals() {
   const [goals, setGoals] = useState([]);
@@ -41,10 +40,20 @@ export default function Goals() {
     }
   };
 
-  const handleUpdateGoal = async (goalId, progress, isCompleted) => {
+  const handleUpdateGoal = async (goal) => {
     try {
-      const res = await api.put(`/goals/${goalId}`, { progress, isCompleted });
-      setGoals(goals.map(g => (g._id === goalId ? res.data : g)));
+      // Increase progress by 10%, max 100
+      const newProgress = Math.min(goal.progress + 10, 100);
+
+      // Automatically mark as completed if progress reaches 100%
+      const newIsCompleted = newProgress === 100;
+
+      const res = await api.put(`/goals/${goal._id}`, {
+        progress: newProgress,
+        isCompleted: newIsCompleted,
+      });
+
+      setGoals(goals.map(g => (g._id === goal._id ? res.data : g)));
     } catch (err) {
       console.error("Failed to update goal:", err);
     }
@@ -95,27 +104,28 @@ export default function Goals() {
             <p className="text-sm text-gray-500 mb-2">Target Date: {goal.targetDate ? new Date(goal.targetDate).toLocaleDateString() : "N/A"}</p>
             
             <div className="w-full h-2 bg-subtle-gray rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-energetic-orange transition-all duration-500" 
-                  style={{ width: `${goal.progress}%` }}
-                ></div>
+              <div 
+                className="h-full bg-energetic-orange transition-all duration-500" 
+                style={{ width: `${goal.progress}%` }}
+              ></div>
             </div>
 
             <div className="flex justify-between items-center mt-2">
               <span className="text-sm font-semibold text-energetic-orange">{goal.progress}%</span>
               <button
                 className={`px-3 py-1 rounded font-semibold transition-all ${
-                  goal.isCompleted
+                  goal.progress === 100
                     ? "bg-subtle-gray cursor-not-allowed"
                     : "bg-mint-green hover:bg-mint-green-600 text-white"
                 }`}
-                onClick={() => handleUpdateGoal(goal._id, goal.progress, !goal.isCompleted)}
+                onClick={() => handleUpdateGoal(goal)}
+                disabled={goal.progress === 100}
               >
-                {goal.isCompleted ? "Completed" : "Mark Complete"}
+                {goal.progress === 100 ? "Completed" : `Done ${goal.progress}%`}
               </button>
             </div>
 
-            {/* Recent Milestones (as per UI image) */}
+            {/* Recent Milestones */}
             <h3 className="text-sm font-semibold mt-4 mb-2">Recent Milestones</h3>
             <ul className="space-y-1">
               {milestones.map((milestone, index) => (

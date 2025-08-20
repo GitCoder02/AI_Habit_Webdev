@@ -47,15 +47,18 @@ export default function Habits() {
     }
   };
 
-  const toggleHabit = async (id) => {
+  const toggleHabit = async (habit) => {
     try {
-      const res = await api.put(`/habits/${id}/toggle`);
-      setHabits(habits.map((habit) => (habit._id === id ? res.data : habit)));
+      const res = await api.put(`/habits/${habit._id}`, {
+        completedToday: !habit.completedToday
+      });
+      setHabits(habits.map((h) => (h._id === habit._id ? res.data : h)));
     } catch (err) {
       console.error(err);
       alert("Failed to update habit");
     }
   };
+
 
   if (loading) return <p className="p-6">Loading habits...</p>;
 
@@ -117,7 +120,7 @@ export default function Habits() {
               <span className="text-gray-500">Best</span>
             </div>
             <button
-              onClick={() => toggleHabit(habit._id)}
+              onClick={() => toggleHabit(habit)}
               className={`px-4 py-2 rounded text-white w-full font-semibold transition-all mt-4 flex items-center justify-center space-x-2
                 ${habit.completedToday 
                   ? "bg-subtle-gray cursor-not-allowed" 
