@@ -3,19 +3,58 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const Habit = require('../models/Habit');
 
-// ✅ Create a new habit
-router.post('/', auth, async (req, res) => {
-  try {
-    const { name, description, category } = req.body;
+// A helper function to check if two dates are on the same day, ignoring time
+const isSameDay = (date1, date2) => {
+  if (!date1 || !date2) return false;
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+};
 
-    const habit = new Habit({
-      userId: req.user.id,
+// A helper function to check if a date was yesterday
+const isYesterday = (date) => {
+  if (!date) return false;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return isSameDay(date, yesterday);
+};
+
+// GET all habits for a user (with daily reset logic)
+router.get('/', auth, async (req, res) => {
+  try {
+    const habits = await Habit.find({ user: req.user.id }).sort({ createdAt: -1 });
+
+    const today = new Date();
+    
+    // Process habits to check for streak resets before sending to frontend
+    const processedHabits = habits.map(habit => {
+      // If the habit was last completed but not yesterday or today, the streak is broken.
+      if (habit.lastCompleted && !isSameDay(habit.lastCompleted, today) && !isYesterday(habit.lastCompleted)) {
+        habit.streak = 0;
+        // Optionally, save the broken streak to the DB. 
+        // For now, we'll just show it on the frontend. A background job is better for saving.
+      }
+      return habit;
+    });
+
+    res.json(processedHabits);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// CREATE a new habit
+router.post('/', auth, async (req, res) => {
+  const { name, description, category } = req.body;
+  try {
+    const newHabit = new Habit({
       name,
       description,
       category,
+      user: req.user.id,
     });
-
-    await habit.save();
+    const habit = await newHabit.save();
     res.json(habit);
   } catch (err) {
     console.error(err.message);
@@ -23,11 +62,43 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// ✅ Get all habits of logged-in user
-router.get('/', auth, async (req, res) => {
+
+// --- NEW DEDICATED ROUTE ---
+// COMPLETE a habit for today
+router.put('/:id/complete', auth, async (req, res) => {
   try {
-    const habits = await Habit.find({ userId: req.user.id });
-    res.json(habits);
+    const habit = await Habit.findById(req.params.id);
+
+    if (!habit || habit.user.toString() !== req.user.id) {
+      return res.status(404).json({ msg: 'Habit not found' });
+    }
+
+    const today = new Date();
+
+    // If already completed today, do nothing.
+    if (isSameDay(habit.lastCompleted, today)) {
+      return res.json(habit);
+    }
+    
+    // If last completed yesterday, continue the streak.
+    if (isYesterday(habit.lastCompleted)) {
+      habit.streak += 1;
+    } else {
+      // Otherwise, start a new streak.
+      habit.streak = 1;
+    }
+
+    // Update best streak if the current streak is greater
+    if (habit.streak > habit.bestStreak) {
+      habit.bestStreak = habit.streak;
+    }
+
+    // Mark as completed for today
+    habit.lastCompleted = today;
+
+    await habit.save();
+    res.json(habit);
+
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

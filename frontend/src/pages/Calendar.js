@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "../context/AuthContext"; // Import useAuth
 import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US'; // Import the locale directly
+import enUS from 'date-fns/locale/en-US';
 
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import './Calendar.css'; 
+import './Calendar.css';
 
 import Card from "../components/Card";
 import api from "../api";
@@ -29,7 +30,7 @@ const localizer = dateFnsLocalizer({
   startOfWeek,
   getDay,
   locales,
-  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // This line is the fix
+  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 });
 
 const categoryColors = {
@@ -53,7 +54,10 @@ const AgendaEvent = ({ event }) => {
   );
 };
 
-export default function CalendarPage({ userId }) {
+export default function CalendarPage() { // No longer needs userId prop
+  const { user, refetchUser } = useAuth(); // Get user and refetch function from context
+  const userId = user?._id; // Get userId from the user object
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date());
@@ -61,36 +65,38 @@ export default function CalendarPage({ userId }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [slotSelection, setSlotSelection] = useState(null);
   const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'Work' });
-  const [googleConnected, setGoogleConnected] = useState(false);
-  const categoryOptions = ["Work", "Learning", "Fitness", "Health", "Mindfulness", "Other"];
-
-  // --- NEW: State for the edit modal ---
   const [isEditing, setIsEditing] = useState(false);
   const [editEventData, setEditEventData] = useState(null);
-
+  const categoryOptions = ["Work", "Learning", "Fitness", "Health", "Mindfulness", "Other"];
 
   useEffect(() => {
-    // ... useEffect remains the same
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchAllEvents = async () => {
+      setLoading(true);
       try {
+        // 1. Always fetch local events
         const localEventsRes = await api.get("/events");
         const localEvents = localEventsRes.data;
 
-        const googleEventsRes = await api.get(`/google/events?userId=${userId}`);
         let googleEvents = [];
-        if (googleEventsRes.data?.length > 0) {
-          googleEvents = googleEventsRes.data.map(ev => ({
-            _id: ev.id,
-            title: ev.summary || "Untitled",
-            description: ev.description || "",
-            start: new Date(ev.start.dateTime || ev.start.date),
-            end: new Date(ev.end.dateTime || ev.end.date),
-            category: "Google",
-            isDraggable: false, 
-          }));
-          setGoogleConnected(true);
+        // 2. Only fetch Google events if the user is connected
+        if (user?.isCalendarConnected) {
+          const googleEventsRes = await api.get(`/google/events?userId=${userId}`);
+          if (googleEventsRes.data?.length > 0) {
+            googleEvents = googleEventsRes.data.map(ev => ({
+              _id: ev.id,
+              title: ev.summary || "Untitled",
+              description: ev.description || "",
+              start: new Date(ev.start.dateTime || ev.start.date),
+              end: new Date(ev.end.dateTime || ev.end.date),
+              category: "Google",
+              isDraggable: false,
+            }));
+          }
         }
         
         const allEvents = [...localEvents, ...googleEvents].map(event => ({
@@ -108,120 +114,122 @@ export default function CalendarPage({ userId }) {
     };
     
     fetchAllEvents();
-  }, [userId]);
+  }, [userId, user?.isCalendarConnected]); // Re-fetch when connection status changes
 
-  // --- Handlers ---
-  const handleNavigate = useCallback((newDate) => setDate(newDate), [setDate]);
-  const handleViewChange = useCallback((newView) => setView(newView), [setView]);
-  const handleSelectEvent = useCallback((event) => {
-    setSelectedEvent(event);
-    setEditEventData({ ...event }); // Pre-fill edit form data
-  }, []);
-  const handleSelectSlot = useCallback((slotInfo) => setSlotSelection(slotInfo), []);
-
-  const handleEventDrop = useCallback(async ({ event, start, end }) => {
-    // ... handleEventDrop remains the same
-    if (event.category === 'Google') return;
-
-    const originalEvents = [...events];
-    const updatedEvents = events.map(e => 
-      e._id === event._id ? { ...e, start, end } : e
-    );
-    setEvents(updatedEvents);
-
+  const handleConnectGoogle = async () => {
+    if (!userId) return;
     try {
-      await api.put(`/events/${event._id}`, { start, end });
-    } catch (err) {
-      console.error("Failed to update event time:", err.response);
-      setEvents(originalEvents); 
-      alert("Could not save the new time. Please check the console for details.");
-    }
-  }, [events, setEvents]);
+      const res = await api.get(`/google/auth-url?userId=${userId}`);
+      const authWindow = window.open(res.data.url, "_blank", "width=600,height=700");
 
-  const handleNewEventChange = (e) => {
-    const { name, value } = e.target;
-    setNewEvent(prev => ({ ...prev, [name]: value }));
-  };
+      // Check if the window is closed, then refetch user data to update the UI
+      const timer = setInterval(() => {
+        if (authWindow.closed) {
+          clearInterval(timer);
+          refetchUser(); // This will update the user object and trigger the useEffect
+        }
+      }, 1000);
 
-  const handleAddEvent = async (e) => {
-    // ... handleAddEvent remains the same
-    e.preventDefault();
-    if (!newEvent.title.trim() || !slotSelection) return;
-    try {
-      const eventToCreate = {
-        ...newEvent,
-        start: slotSelection.start,
-        end: slotSelection.end,
-      };
-      const res = await api.post("/events", eventToCreate);
-      setEvents([...events, { ...res.data, start: new Date(res.data.start), end: new Date(res.data.end) }]);
-      setSlotSelection(null);
-      setNewEvent({ title: '', description: '', category: 'Work' });
     } catch (err) {
-      console.error("Failed to add event:", err);
-    }
-  };
-  
-  const handleDeleteEvent = async () => {
-    // ... handleDeleteEvent remains the same
-    if (!selectedEvent) return;
-    try {
-      if (selectedEvent.category === 'Google') {
-        alert("Cannot delete Google Calendar events from here.");
-        return;
-      }
-      await api.delete(`/events/${selectedEvent._id}`);
-      setEvents(events.filter(event => event._id !== selectedEvent._id));
-      setSelectedEvent(null);
-    } catch (err) {
-      console.error("Failed to delete event:", err);
-      alert("Failed to delete event.");
+      console.error("Failed to get Google Auth URL", err);
+      alert("Could not connect to Google Calendar. Please try again.");
     }
   };
 
-  // --- NEW: Handlers for the Edit Modal ---
-  const handleEditFormChange = (e) => {
-    const { name, value } = e.target;
-    setEditEventData(prev => ({...prev, [name]: value}));
-  };
-
-  const handleUpdateEvent = async (e) => {
-    e.preventDefault();
-    if (!editEventData || !editEventData.title.trim()) return;
-
-    try {
-      const res = await api.put(`/events/${editEventData._id}`, editEventData);
-      setEvents(events.map(event => event._id === editEventData._id ? { ...res.data, start: new Date(res.data.start), end: new Date(res.data.end) } : event));
-      
-      // Close and reset modal
-      setSelectedEvent(null);
-      setIsEditing(false);
-    } catch (err) {
-      console.error("Failed to update event:", err);
-      alert("Failed to update event.");
-    }
-  };
-
-  const closeModal = () => {
-    setSelectedEvent(null);
-    setIsEditing(false);
-  };
-
-  const eventPropGetter = (event) => {
-    // ... eventPropGetter remains the same
-    const backgroundColor = categoryColors[event.category] || 'gray-300';
-    const style = {
-      backgroundColor: `var(--color-${backgroundColor})`,
-      borderRadius: '5px',
-      color: '#333',
-      border: '0px',
-      display: 'block',
-      cursor: event.category === 'Google' ? 'not-allowed' : 'pointer',
+  // --- (All other handlers: handleNavigate, handleEventDrop, handleAddEvent, etc. remain unchanged) ---
+    const handleNavigate = useCallback((newDate) => setDate(newDate), [setDate]);
+    const handleViewChange = useCallback((newView) => setView(newView), [setView]);
+    const handleSelectEvent = useCallback((event) => {
+        setSelectedEvent(event);
+        setEditEventData({ ...event });
+    }, []);
+    const handleSelectSlot = useCallback((slotInfo) => setSlotSelection(slotInfo), []);
+    const handleEventDrop = useCallback(async ({ event, start, end }) => {
+        if (event.category === 'Google') return;
+        const originalEvents = [...events];
+        const updatedEvents = events.map(e =>
+            e._id === event._id ? { ...e, start, end } : e
+        );
+        setEvents(updatedEvents);
+        try {
+            await api.put(`/events/${event._id}`, { start, end });
+        } catch (err) {
+            console.error("Failed to update event time:", err.response);
+            setEvents(originalEvents);
+            alert("Could not save the new time. Please check the console for details.");
+        }
+    }, [events, setEvents]);
+    const handleNewEventChange = (e) => {
+        const { name, value } = e.target;
+        setNewEvent(prev => ({ ...prev, [name]: value }));
     };
-    return {
-      style: style
+    const handleAddEvent = async (e) => {
+        e.preventDefault();
+        if (!newEvent.title.trim() || !slotSelection) return;
+        try {
+            const eventToCreate = {
+                ...newEvent,
+                start: slotSelection.start,
+                end: slotSelection.end,
+            };
+            const res = await api.post("/events", eventToCreate);
+            setEvents([...events, { ...res.data, start: new Date(res.data.start), end: new Date(res.data.end) }]);
+            setSlotSelection(null);
+            setNewEvent({ title: '', description: '', category: 'Work' });
+        } catch (err) {
+            console.error("Failed to add event:", err);
+        }
     };
-  };
+    const handleDeleteEvent = async () => {
+        if (!selectedEvent) return;
+        try {
+            if (selectedEvent.category === 'Google') {
+                alert("Cannot delete Google Calendar events from here.");
+                return;
+            }
+            await api.delete(`/events/${selectedEvent._id}`);
+            setEvents(events.filter(event => event._id !== selectedEvent._id));
+            setSelectedEvent(null);
+        } catch (err) {
+            console.error("Failed to delete event:", err);
+            alert("Failed to delete event.");
+        }
+    };
+    const handleEditFormChange = (e) => {
+        const { name, value } = e.target;
+        setEditEventData(prev => ({ ...prev, [name]: value }));
+    };
+    const handleUpdateEvent = async (e) => {
+        e.preventDefault();
+        if (!editEventData || !editEventData.title.trim()) return;
+        try {
+            const res = await api.put(`/events/${editEventData._id}`, editEventData);
+            setEvents(events.map(event => event._id === editEventData._id ? { ...res.data, start: new Date(res.data.start), end: new Date(res.data.end) } : event));
+            setSelectedEvent(null);
+            setIsEditing(false);
+        } catch (err) {
+            console.error("Failed to update event:", err);
+            alert("Failed to update event.");
+        }
+    };
+    const closeModal = () => {
+        setSelectedEvent(null);
+        setIsEditing(false);
+    };
+    const eventPropGetter = (event) => {
+        const backgroundColor = categoryColors[event.category] || 'gray-300';
+        const style = {
+            backgroundColor: `var(--color-${backgroundColor})`,
+            borderRadius: '5px',
+            color: '#333',
+            border: '0px',
+            display: 'block',
+            cursor: event.category === 'Google' ? 'not-allowed' : 'pointer',
+        };
+        return {
+            style: style
+        };
+    };
 
   if (loading) return <Loader />;
 
@@ -232,6 +240,16 @@ export default function CalendarPage({ userId }) {
           <h1 className="text-3xl font-bold text-gray-800">Smart Calendar</h1>
           <p className="text-gray-500">A modern view of your schedule.</p>
         </div>
+        
+        {/* --- NEW: Conditional Connect Button --- */}
+        {!user?.isCalendarConnected && (
+          <button
+            onClick={handleConnectGoogle}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+          >
+            Connect Google Calendar
+          </button>
+        )}
       </div>
 
       <Card>
@@ -251,17 +269,16 @@ export default function CalendarPage({ userId }) {
           resizable
           components={{
             agenda: {
-              event: AgendaEvent, // Use our custom component here
+              event: AgendaEvent,
             },
           }}
         />
       </Card>
-
-      {/* --- MODIFIED: Modal now handles both View and Edit states --- */}
+      
+      {/* --- (Modals for viewing, editing, and creating events remain unchanged) --- */}
       <Modal isOpen={!!selectedEvent} onClose={closeModal}>
         {selectedEvent && (
           isEditing ? (
-            // EDIT VIEW
             <form onSubmit={handleUpdateEvent} className="space-y-4">
               <h2 className="text-2xl font-bold text-gray-800">Edit Event</h2>
               <div>
@@ -300,7 +317,6 @@ export default function CalendarPage({ userId }) {
               </div>
             </form>
           ) : (
-            // DISPLAY VIEW
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-gray-800">{selectedEvent.title}</h2>
               <p className="text-gray-600">{selectedEvent.description || 'No description provided.'}</p>
@@ -331,7 +347,6 @@ export default function CalendarPage({ userId }) {
         )}
       </Modal>
 
-      {/* ... (Create Event Modal remains the same) ... */}
       <Modal isOpen={!!slotSelection} onClose={() => setSlotSelection(null)}>
         {slotSelection && (
           <form onSubmit={handleAddEvent} className="space-y-4">

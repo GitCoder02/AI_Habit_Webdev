@@ -1,9 +1,9 @@
-// frontend/src/pages/Habits.js
 import { useState, useEffect } from "react";
+import { isSameDay } from 'date-fns'; // A handy function from date-fns
 import Card from "../components/Card";
 import api from "../api";
 import { FaCheckCircle } from 'react-icons/fa';
-import Loader from "../components/Loader"; // Import Loader
+import Loader from "../components/Loader";
 
 export default function Habits() {
   const categoryOptions = ["Health", "Fitness", "Mindfulness", "Learning", "Work", "Other"];
@@ -48,11 +48,10 @@ export default function Habits() {
     }
   };
 
-  const toggleHabit = async (habit) => {
+  // This function now calls the new, smarter backend endpoint
+  const completeHabit = async (habit) => {
     try {
-      const res = await api.put(`/habits/${habit._id}`, {
-        completedToday: !habit.completedToday
-      });
+      const res = await api.put(`/habits/${habit._id}/complete`);
       setHabits(habits.map((h) => (h._id === habit._id ? res.data : h)));
     } catch (err) {
       console.error(err);
@@ -67,7 +66,7 @@ export default function Habits() {
       <h1 className="text-3xl font-bold text-gray-800">Your Habits</h1>
       <p className="text-gray-500 mb-4">Build consistency, one day at a time 🪴</p>
 
-      {/* Add New Habit */}
+      {/* Add New Habit Form */}
       <Card title="Add New Habit">
         <form onSubmit={handleAddHabit} className="space-y-3">
           <input
@@ -104,35 +103,40 @@ export default function Habits() {
 
       {/* Habit List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {habits.map((habit) => (
-          <Card
-            key={habit._id}
-            title={habit.name}
-            className="hover:shadow-lg transition-shadow relative"
-          >
-            <p className="text-gray-700 mb-2">{habit.description}</p>
-            <span className="inline-block bg-mint-green-100 text-mint-green text-xs px-2 py-1 rounded-full">{habit.category}</span>
-            <div className="flex items-center space-x-2 mt-2">
-              <span className="text-energetic-orange">🔥</span>
-              <span className="font-bold text-mint-green">{habit.streak}</span>
-              <span className="text-gray-500">Current</span>
-              <span className="font-bold text-energetic-orange">{habit.bestStreak}</span>
-              <span className="text-gray-500">Best</span>
-            </div>
-            <button
-              onClick={() => toggleHabit(habit)}
-              className={`px-4 py-2 rounded text-white w-full font-semibold transition-all mt-4 flex items-center justify-center space-x-2
-                ${habit.completedToday 
-                  ? "bg-subtle-gray cursor-not-allowed" 
-                  : "bg-mint-green hover:bg-mint-green-600"}`
-              }
-              disabled={habit.completedToday}
+        {habits.map((habit) => {
+          // Determine if the habit is completed *for today* using the lastCompleted date
+          const isCompletedToday = habit.lastCompleted && isSameDay(new Date(habit.lastCompleted), new Date());
+
+          return (
+            <Card
+              key={habit._id}
+              title={habit.name}
+              className="hover:shadow-lg transition-shadow relative"
             >
-              <FaCheckCircle />
-              <span>Complete</span>
-            </button>
-          </Card>
-        ))}
+              <p className="text-gray-700 mb-2">{habit.description}</p>
+              <span className="inline-block bg-mint-green-100 text-mint-green text-xs px-2 py-1 rounded-full">{habit.category}</span>
+              <div className="flex items-center space-x-2 mt-2">
+                <span className="text-energetic-orange">🔥</span>
+                <span className="font-bold text-mint-green">{habit.streak}</span>
+                <span className="text-gray-500">Current</span>
+                <span className="font-bold text-energetic-orange">{habit.bestStreak}</span>
+                <span className="text-gray-500">Best</span>
+              </div>
+              <button
+                onClick={() => completeHabit(habit)}
+                className={`px-4 py-2 rounded text-white w-full font-semibold transition-all mt-4 flex items-center justify-center space-x-2
+                  ${isCompletedToday
+                    ? "bg-green-500 cursor-not-allowed" // A different color for completed
+                    : "bg-mint-green hover:bg-mint-green-600"}`
+                }
+                disabled={isCompletedToday} // Disable button if completed today
+              >
+                <FaCheckCircle />
+                <span>{isCompletedToday ? "Done for Today!" : "Complete"}</span>
+              </button>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
