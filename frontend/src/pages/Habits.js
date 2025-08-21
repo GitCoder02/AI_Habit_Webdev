@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import api from "../api";
 import { FaCheckCircle } from 'react-icons/fa';
+import Loader from "../components/Loader"; // Import Loader
 
 export default function Habits() {
   const categoryOptions = ["Health", "Fitness", "Mindfulness", "Learning", "Work", "Other"];
@@ -18,9 +19,9 @@ export default function Habits() {
       try {
         const res = await api.get("/habits");
         setHabits(res.data);
-        setLoading(false);
       } catch (err) {
         console.error(err);
+      } finally {
         setLoading(false);
       }
     };
@@ -59,8 +60,7 @@ export default function Habits() {
     }
   };
 
-
-  if (loading) return <p className="p-6">Loading habits...</p>;
+  if (loading) return <Loader />;
 
   return (
     <div className="bg-light-gray-bg min-h-screen p-6 space-y-6">

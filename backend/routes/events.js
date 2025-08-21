@@ -3,20 +3,21 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const Event = require('../models/Event');
 
-// ✅ Create a new event
+// CREATE an event
 router.post('/', auth, async (req, res) => {
-  try {
-    const { title, description, start, end } = req.body;
+  const { title, description, category, start, end } = req.body;
 
-    const event = new Event({
-      userId: req.user.id,
+  try {
+    const newEvent = new Event({
       title,
       description,
+      category,
       start,
       end,
+      user: req.user.id, // Correct: uses 'user'
     });
 
-    await event.save();
+    const event = await newEvent.save();
     res.json(event);
   } catch (err) {
     console.error(err.message);
@@ -24,10 +25,13 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// ✅ Get all events of logged-in user
+// GET all events of logged-in user
 router.get('/', auth, async (req, res) => {
   try {
-    const events = await Event.find({ userId: req.user.id });
+    // --- FIX ---
+    // Was: { userId: req.user.id }
+    // Now: { user: req.user.id }
+    const events = await Event.find({ user: req.user.id });
     res.json(events);
   } catch (err) {
     console.error(err.message);
@@ -35,20 +39,31 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// ✅ Update an event
+// UPDATE an event
 router.put('/:id', auth, async (req, res) => {
+  const { title, description, category, start, end } = req.body;
+
+  const eventFields = {};
+  if (title) eventFields.title = title;
+  if (description) eventFields.description = description;
+  if (category) eventFields.category = category;
+  if (start) eventFields.start = start;
+  if (end) eventFields.end = end;
+
   try {
-    const { title, description, start, end } = req.body;
+    // Correct: uses 'user'
+    let event = await Event.findOne({ _id: req.params.id, user: req.user.id });
 
-    let event = await Event.findOne({ _id: req.params.id, userId: req.user.id });
-    if (!event) return res.status(404).json({ msg: 'Event not found' });
+    if (!event) {
+      return res.status(404).json({ msg: 'Event not found' });
+    }
 
-    event.title = title || event.title;
-    event.description = description || event.description;
-    event.start = start || event.start;
-    event.end = end || event.end;
+    event = await Event.findByIdAndUpdate(
+      req.params.id,
+      { $set: eventFields },
+      { new: true }
+    );
 
-    await event.save();
     res.json(event);
   } catch (err) {
     console.error(err.message);
@@ -56,11 +71,17 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// ✅ Delete an event
+// DELETE an event
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const event = await Event.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
-    if (!event) return res.status(404).json({ msg: 'Event not found' });
+    // --- FIX ---
+    // Was: { _id: req.params.id, userId: req.user.id }
+    // Now: { _id: req.params.id, user: req.user.id }
+    const event = await Event.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    
+    if (!event) {
+      return res.status(404).json({ msg: 'Event not found' });
+    }
 
     res.json({ msg: 'Event removed' });
   } catch (err) {

@@ -1,89 +1,72 @@
 const express = require('express');
-const router = express.Router();
 const { google } = require('googleapis');
 const User = require('../models/User');
-
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const router = express.Router();
 
 const oauth2Client = new google.auth.OAuth2(
-  CLIENT_ID,
-  CLIENT_SECRET,
-  REDIRECT_URI
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
 );
 
-// 1️⃣ Generate OAuth URL
-router.get('/auth-url', async (req, res) => {
-  try {
-    const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ msg: 'Missing user ID' });
-
-    const url = oauth2Client.generateAuthUrl({
-      access_type: 'offline',   // ensures refresh token
-      scope: ['https://www.googleapis.com/auth/calendar'],
-      prompt: 'consent',        // always ask for consent to get refresh token
-      state: userId,            // pass userId to callback
-    });
-
-    res.json({ url });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Failed to generate Google auth URL' });
+// 1. Generate Auth URL
+router.get('/auth-url', (req, res) => {
+  const { userId } = req.query;
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
   }
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/calendar'],
+    prompt: 'consent', // Important to get a refresh token every time
+    state: userId,   // Pass the userId to identify the user in the callback
+  });
+  res.json({ url });
 });
 
-// 2️⃣ OAuth Callback
+// 2. Handle OAuth Callback
 router.get('/callback', async (req, res) => {
-  const code = req.query.code;
-  const userId = req.query.state;
-
-  if (!code || !userId) return res.status(400).send('Missing code or user info');
-
   try {
-    const { tokens } = await oauth2Client.getToken(code);
+    const { code, state: userId } = req.query;
+    if (!userId) {
+      return res.status(400).send('User ID not found in state.');
+    }
 
+    const { tokens } = await oauth2Client.getToken(code);
+    
     await User.findByIdAndUpdate(userId, {
       googleTokens: {
         accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || undefined,
+        refreshToken: tokens.refresh_token,
         expiryDate: tokens.expiry_date,
       },
       isCalendarConnected: true,
     });
 
-    res.send('Google Calendar connected! You can close this tab.');
-  } catch (err) {
-    console.error('Error exchanging code for tokens:', err);
-    res.status(500).send('Failed to connect Google Calendar');
+    res.send('<p>Google Calendar connected successfully! You can close this tab now.</p><script>window.close();</script>');
+  } catch (error) {
+    console.error('Error during Google OAuth callback:', error);
+    res.status(500).send('Authentication failed.');
   }
 });
 
-// 3️⃣ Fetch Google Calendar events
+// 3. Fetch Google Calendar Events
 router.get('/events', async (req, res) => {
   try {
-    const user = await User.findById(req.query.userId);
-    if (!user?.googleTokens?.accessToken) {
-      return res.status(400).json({ msg: 'Google Calendar not connected' });
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user?.isCalendarConnected || !user.googleTokens?.refreshToken) {
+      return res.status(401).json({ error: 'User not connected to Google Calendar' });
     }
 
     oauth2Client.setCredentials({
       access_token: user.googleTokens.accessToken,
       refresh_token: user.googleTokens.refreshToken,
-      expiry_date: user.googleTokens.expiryDate,
-    });
-
-    // Auto-refresh tokens
-    oauth2Client.on('tokens', (tokens) => {
-      if (tokens.refresh_token) {
-        User.findByIdAndUpdate(user._id, { 'googleTokens.refreshToken': tokens.refresh_token }).catch(console.error);
-      }
-      if (tokens.access_token) {
-        User.findByIdAndUpdate(user._id, {
-          'googleTokens.accessToken': tokens.access_token,
-          'googleTokens.expiryDate': tokens.expiry_date,
-        }).catch(console.error);
-      }
     });
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -95,27 +78,36 @@ router.get('/events', async (req, res) => {
       orderBy: 'startTime',
     });
 
+    // ** THE FIX **
+    // Check for a refreshed token after the API call and save it.
+    const newAccessToken = oauth2Client.credentials.access_token;
+    if (newAccessToken !== user.googleTokens.accessToken) {
+        await User.findByIdAndUpdate(userId, { 
+            'googleTokens.accessToken': newAccessToken,
+            'googleTokens.expiryDate': oauth2Client.credentials.expiry_date
+        });
+    }
+
     res.json(response.data.items);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Failed to fetch Google events' });
+  } catch (error) {
+    console.error('Error fetching Google Calendar events:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
   }
 });
 
-// 4️⃣ Create a new Google Calendar event
+// 4. Create a new Google Calendar event
 router.post('/events', async (req, res) => {
   try {
     const { userId, title, description, start, end } = req.body;
     const user = await User.findById(userId);
 
-    if (!user?.googleTokens?.accessToken || !user.isCalendarConnected) {
+    if (!user?.isCalendarConnected || !user.googleTokens?.refreshToken) {
       return res.status(400).json({ msg: 'Google Calendar not connected' });
     }
 
     oauth2Client.setCredentials({
       access_token: user.googleTokens.accessToken,
       refresh_token: user.googleTokens.refreshToken,
-      expiry_date: user.googleTokens.expiryDate,
     });
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -128,6 +120,15 @@ router.post('/events', async (req, res) => {
         end: { dateTime: new Date(end).toISOString() },
       },
     });
+
+    // Also check for a refreshed token after this API call
+    const newAccessToken = oauth2Client.credentials.access_token;
+    if (newAccessToken !== user.googleTokens.accessToken) {
+        await User.findByIdAndUpdate(userId, { 
+            'googleTokens.accessToken': newAccessToken,
+            'googleTokens.expiryDate': oauth2Client.credentials.expiry_date
+        });
+    }
 
     res.json(response.data);
   } catch (err) {

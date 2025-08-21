@@ -1,0 +1,138 @@
+/*
+ * Custom styles for react-big-calendar to match the project's theme.
+ */
+
+/* First, define CSS variables using your tailwind.config.js colors */
+:root {
+    --color-mint-green: #10B981;
+    --color-mint-green-100: #D1FAE5;
+    --color-subtle-gray: #E5E7EB;
+    --color-energetic-orange: #F59E0B;
+    --color-pastel-blue: #BFDBFE;
+    --color-pastel-purple: #DDD6FE;
+    --color-pastel-teal: #A7F3D0;
+    --color-pastel-pink: #FBCFE8;
+}
+
+/* Toolbar buttons (Today, Back, Next) */
+.rbc-toolbar button {
+    background-color: var(--color-mint-green) !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+.rbc-toolbar button:hover, .rbc-toolbar button:focus {
+    background-color: #059669 !important; /* mint-green-600 */
+    transform: translateY(-2px);
+}
+
+.rbc-toolbar button:active {
+    background-color: #047857 !important;
+}
+
+/* Today's date cell highlight */
+.rbc-day-bg.rbc-today {
+    background-color: var(--color-mint-green-100);
+}
+
+/* Calendar header (Sun, Mon, Tue...) */
+.rbc-header {
+    border-bottom: 2px solid var(--color-mint-green);
+    padding: 10px 0;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Event color styling (used by eventPropGetter) */
+.rbc-event {
+    background-color: var(--color-pastel-blue) !important; /* Default event color */
+    padding: 4px 8px;
+    font-size: 0.85rem;
+}
+
+/*
+ * NEW & IMPROVED Custom styles for the Agenda View
+ * Replace your old .rbc-agenda-* styles with these.
+ */
+
+/* Main container for the agenda list */
+.rbc-agenda-view {
+  border: none;
+}
+
+/* We don't need the default table structure anymore */
+.rbc-agenda-table {
+  border: none;
+  width: 100%;
+}
+
+.rbc-agenda-table tbody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Space between each day's card */
+}
+
+/* Hide the default table header (Date, Time, Event) */
+.rbc-agenda-view thead {
+  display: none;
+}
+
+/* Style each date's row as a card */
+.rbc-agenda-table tr {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--color-subtle-gray);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Style the date header (e.g., "Thu Aug 21") */
+.rbc-agenda-date-cell {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-subtle-gray);
+  margin-bottom: 12px;
+}
+
+/* We don't need the default time cell */
+.rbc-agenda-time-cell {
+  display: none;
+}
+
+/* This is our new custom component's container */
+.custom-agenda-event {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* --- HOVER ANIMATION --- */
+.custom-agenda-event:hover {
+  transform: translateX(5px);
+  background-color: var(--color-light-gray-bg);
+}
+
+/* Style for the time range inside our custom component */
+.custom-agenda-event .event-time {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--color-energetic-orange);
+  width: 150px; /* Give it a fixed width for alignment */
+}
+
+/* Style for the title inside our custom component */
+.custom-agenda-event .event-title {
+  font-weight: 500;
+  color: #374151;
+}

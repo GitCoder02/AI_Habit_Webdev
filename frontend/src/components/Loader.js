@@ -1,8 +1,11 @@
-// frontend/src/components/Loader.js
-export default function Loader({ small = false }) {
-  return (
-    <div className={`flex items-center justify-center ${small ? "py-1" : "py-8"}`}>
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-mint-green" />
-    </div>
-  );
-}
+import React from 'react';
+
+const Loader = () => {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-mint-green"></div>
+        </div>
+    );
+};
+
+export default Loader;

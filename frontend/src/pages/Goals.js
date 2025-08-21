@@ -2,9 +2,11 @@
 import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import api from "../api";
+import Loader from "../components/Loader"; // Import Loader
 
 export default function Goals() {
   const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true); // Add loading state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetDate, setTargetDate] = useState("");
@@ -21,6 +23,8 @@ export default function Goals() {
       setGoals(res.data);
     } catch (err) {
       console.error("Failed to fetch goals:", err);
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -58,6 +62,8 @@ export default function Goals() {
       console.error("Failed to update goal:", err);
     }
   };
+
+  if (loading) return <Loader />; // Show loader
 
   return (
     <div className="bg-light-gray-bg min-h-screen p-6 space-y-6">
