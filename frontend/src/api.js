@@ -3,7 +3,6 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000/api",
-  // not using cookies; token is attached manually from localStorage
 });
 
 // attach token
@@ -19,14 +18,13 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
-      // let app handle redirect via AuthContext or window.location
       window.location.href = "/login";
     }
     return Promise.reject(err);
   }
 );
 
-// helper wrappers (optional, but convenient)
+// helper wrappers
 export const authApi = {
   login: (data) => api.post("/auth/login", data),
   register: (data) => api.post("/auth/register", data),
@@ -50,9 +48,16 @@ export const goalsApi = {
 export const habitsApi = {
   list: () => api.get("/habits"),
   create: (payload) => api.post("/habits", payload),
-  toggle: (id) => api.put(`/habits/${id}/toggle`),
+  // CHANGED: use /complete endpoint (backend uses /:id/complete)
+  toggle: (id) => api.put(`/habits/${id}/complete`),
   update: (id, payload) => api.put(`/habits/${id}`, payload),
   remove: (id) => api.delete(`/habits/${id}`),
+};
+
+export const googleApi = {
+  authUrl: () => api.get("/google/auth-url"),
+  fetchEvents: (params) => api.get("/google/events", { params }),
+  createEvent: (payload) => api.post("/google/events", payload),
 };
 
 export const dashboardApi = {
