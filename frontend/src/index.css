@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-light-gray-bg;
+  }
+}
+
+/* Add these styles to the bottom of your index.css file */
+
+/* --- UI Polish --- */
+
+/* Add a subtle box-shadow and lift to cards on hover */
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Add a subtle transition to all elements for smooth effects */
+* {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Style buttons on hover */
+button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+/* Add a subtle transition to input fields on focus */
+input:focus, select:focus {
+    transform: scale(1.01);
+}
