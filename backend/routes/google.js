@@ -84,13 +84,13 @@ router.get("/auth-url", auth, (req, res) => {
 });
 
 /**
- * GET /api/google/oauth2callback
+ * GET /api/google/callback
  * This is the callback Google will hit after user consents.
  * It expects `code` and `state` in the query params.
  *
  * We validate the server-side state mapping to find the correct user.
  */
-router.get("/oauth2callback", async (req, res) => {
+router.get("/callback", async (req, res) => {
   const { code, state } = req.query;
   if (!code || !state) {
     return res.status(400).send("Missing code or state");
@@ -122,6 +122,7 @@ router.get("/oauth2callback", async (req, res) => {
       expiryDate: tokens.expiry_date,
     };
     user.isCalendarConnected = true;
+    user.googleConnectedAt = new Date(); // <-- Add this line
 
     await user.save();
 
@@ -139,8 +140,22 @@ router.get("/oauth2callback", async (req, res) => {
  */
 async function getClientForUser(userId) {
   const user = await User.findById(userId);
-  if (!user || !user.google || (!user.google.accessToken && !user.google.refreshToken)) {
-    throw new Error("No google tokens for user");
+  // Check if connection expired (2 days = 172800000 ms)
+  if (
+    !user ||
+    !user.google ||
+    (!user.google.accessToken && !user.google.refreshToken) ||
+    !user.googleConnectedAt ||
+    (Date.now() - new Date(user.googleConnectedAt).getTime() > 2 * 24 * 60 * 60 * 1000)
+  ) {
+    // Auto-log out: clear tokens and mark as disconnected
+    if (user) {
+      user.google = undefined;
+      user.isCalendarConnected = false;
+      user.googleConnectedAt = undefined;
+      await user.save();
+    }
+    throw new Error("Google connection expired");
   }
 
   const client = new google.auth.OAuth2(
@@ -222,6 +237,19 @@ router.post("/events", auth, async (req, res) => {
   } catch (err) {
     console.error("Failed to create Google event:", err);
     res.status(500).json({ error: "Failed to create Google event" });
+  }
+});
+
+router.get("/status", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const connected =
+      user.isCalendarConnected &&
+      user.googleConnectedAt &&
+      Date.now() - new Date(user.googleConnectedAt).getTime() <= 2 * 24 * 60 * 60 * 1000;
+    res.json({ connected });
+  } catch (err) {
+    res.status(500).json({ connected: false });
   }
 });
 

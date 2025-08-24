@@ -101,6 +101,8 @@ export default function CalendarPage() {
     "Custom",
   ];
 
+  const [googleConnected, setGoogleConnected] = useState(false);
+
   useEffect(() => {
     if (!userId) {
       setLoading(false);
@@ -166,17 +168,48 @@ export default function CalendarPage() {
     };
   }, [userId, user?.isCalendarConnected]);
 
+  useEffect(() => {
+    // Check Google connection status on mount
+    const checkGoogleStatus = async () => {
+      try {
+        const res = await googleApi.status(); // should call /api/google/status
+        setGoogleConnected(res.data.connected);
+      } catch {
+        setGoogleConnected(false);
+      }
+    };
+    checkGoogleStatus();
+  }, [userId]);
+
+  // Add this function for disconnecting Google Calendar
+  const handleDisconnectGoogle = async () => {
+    try {
+      await googleApi.disconnect(); // your backend should revoke token
+      setGoogleConnected(false);
+      if (typeof refetchUser === "function") await refetchUser();
+    } catch (err) {
+      console.error("Failed to disconnect Google", err);
+    }
+  };
+
   const handleConnectGoogle = async () => {
     try {
       const res = await googleApi.authUrl();
       const authWindow = window.open(res.data.url, "_blank", "width=700,height=700");
 
-      // poll for window close and then refetch user
-      const timer = setInterval(() => {
+      // poll for window close and then refetch user and google status
+      const timer = setInterval(async () => {
         if (!authWindow || authWindow.closed) {
           clearInterval(timer);
-          // refetch user profile to pick up isCalendarConnected = true
-          if (typeof refetchUser === "function") refetchUser();
+          if (typeof refetchUser === "function") await refetchUser();
+
+          // Refresh googleConnected state
+          try {
+            const statusRes = await googleApi.status();
+            setGoogleConnected(statusRes.data.connected);
+          } catch {
+            setGoogleConnected(false);
+          }
         }
       }, 1000);
     } catch (err) {
@@ -363,7 +396,15 @@ export default function CalendarPage() {
           <p className="text-gray-500">A modern view of your schedule.</p>
         </div>
 
-        {!user?.isCalendarConnected && (
+        {googleConnected ? (
+          <button
+            onClick={handleDisconnectGoogle}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+            aria-label="Disconnect Google Calendar"
+          >
+            Disconnect Google Calendar
+          </button>
+        ) : (
           <button
             onClick={handleConnectGoogle}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"

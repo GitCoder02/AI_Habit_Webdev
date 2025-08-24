@@ -7,12 +7,15 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   lastLogin: Date,
   // placeholders for Phase 2+:
-  googleTokens: {
+  google: {
     accessToken: String,
     refreshToken: String,
-    expiryDate: Date
+    scope: String,
+    tokenType: String,
+    expiryDate: Number,
   },
-  isCalendarConnected: { type: Boolean, default: false }
+  isCalendarConnected: { type: Boolean, default: false },
+  googleConnectedAt: { type: Date }, // <-- Add this line
 });
 
 module.exports = mongoose.model('User', UserSchema);

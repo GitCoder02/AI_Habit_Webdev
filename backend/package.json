@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -21,6 +22,7 @@
     "googleapis": "^156.0.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lru-cache": "^11.1.0",
     "mongoose": "^8.17.1"
   },
   "devDependencies": {

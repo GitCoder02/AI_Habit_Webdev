@@ -18,6 +18,7 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
+      // optional: redirect to login
       window.location.href = "/login";
     }
     return Promise.reject(err);
@@ -63,5 +64,31 @@ export const googleApi = {
 export const dashboardApi = {
   summary: () => api.get("/dashboard"),
 };
+
+/**
+ * AI API: suggestions, peakHours, execute
+ * - suggestions() returns axios response of GET /api/ai/suggestions
+ * - peakHours() returns GET /api/ai/peak-hours
+ * - execute(action) posts an action object to server to apply suggestion
+ */
+export const aiApi = {
+  suggestions: () => api.get("/ai/suggestions"),
+  peakHours: () => api.get("/ai/peak-hours"),
+  /**
+   * action: { action: "reschedule"|"reduce_frequency"|"create_microtask"|"suggest_block", payload: {...} }
+   */
+  execute: (action) => api.post("/ai/execute", { action }),
+};
+
+// Backwards-compatible helper functions (used elsewhere)
+export async function fetchAISuggestions() {
+  const res = await api.get("/ai/suggestions");
+  return res.data;
+}
+
+export async function fetchAIPeakHours() {
+  const res = await api.get("/ai/peak-hours");
+  return res.data;
+}
 
 export default api;
