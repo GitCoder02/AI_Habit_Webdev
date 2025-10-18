@@ -15,6 +15,12 @@ import { eventsApi, goalsApi, habitsApi, aiApi } from "../api";
 import Loader from "../components/Loader";
 import IntelligentSuggestions from "../components/IntelligentSuggestions";
 
+const BRAND = {
+  blue: "#2C7BE5",     // soft blue
+  teal: "#31B7BA",     // your soothing teal
+  gradient: "linear-gradient(135deg, #2C7BE5 0%, #31B7BA 100%)",
+};
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [habits, setHabits] = useState([]);
@@ -27,8 +33,7 @@ export default function Dashboard() {
   const [intelligentSuggestions, setIntelligentSuggestions] = useState([]);
   const [intelligentLoading, setIntelligentLoading] = useState(false);
 
-
-  // Load core data (habits/goals/events)
+  // Load core data
   useEffect(() => {
     if (!user) return;
 
@@ -105,103 +110,100 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Welcome Header */}
+      {/* Welcome Header - Soft Radial (Full Width) */}
       <div
-        className="text-white rounded-lg p-6 shadow-lg"
+        className="rounded-2xl border border-blue-100/60 shadow-sm p-6"
         style={{
-          background: "linear-gradient(135deg, #31B7BA 0%, #26949E 100%)",
+          background: `
+            radial-gradient(1200px 600px at 0% 0%,
+              rgba(44,123,229,0.12) 0%,
+              rgba(44,123,229,0.08) 25%,
+              rgba(49,183,186,0.08) 55%,
+              rgba(49,183,186,0.06) 75%,
+              rgba(255,255,255,1) 100%
+            ),
+            radial-gradient(900px 500px at 100% 100%,
+              rgba(49,183,186,0.08) 0%,
+              rgba(49,183,186,0.06) 40%,
+              rgba(255,255,255,1) 100%
+            )
+          `
         }}
       >
-        <h1 className="text-3xl font-bold mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 mb-1">
           Welcome back, {user?.name || "Friend"}! 🎉
         </h1>
-        <p className="text-teal-50">
-          Ready to make today productive and meaningful?
-          <br />
-          Here's your quick snapshot for today — insights are pulled from your
-          real data.
+        <p className="text-gray-600">
+          Ready to make today productive and meaningful? Here’s your quick snapshot.
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <h3 className="text-gray-500 text-sm font-semibold uppercase">
+        <div className="rounded-xl border border-blue-100/60 bg-white/70 backdrop-blur-sm shadow-sm p-5 hover:shadow-md transition">
+          <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wide">
             Active Habits
           </h3>
-          <p
-            className="text-4xl font-bold mt-2"
-            style={{ color: "#31B7BA" }}
-          >
+          <p className="text-4xl font-bold mt-2" style={{ color: BRAND.teal }}>
             {activeHabits}
           </p>
-          <p className="text-sm text-gray-600 mt-1">
-            out of {habits.length} total
-          </p>
-        </Card>
+          <p className="text-sm text-gray-600 mt-1">out of {habits.length} total</p>
+        </div>
 
-        <Card>
-          <h3 className="text-gray-500 text-sm font-semibold uppercase">
+        <div className="rounded-xl border border-blue-100/60 bg-white/70 backdrop-blur-sm shadow-sm p-5 hover:shadow-md transition">
+          <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wide">
             Goals
           </h3>
-          <p className="text-4xl font-bold text-green-600 mt-2">
+          <p className="text-4xl font-bold mt-2" style={{ color: BRAND.blue }}>
             {totalGoals}
           </p>
-          <p className="text-sm text-gray-600 mt-1">
-            {avgGoalProgress}% avg progress
-          </p>
-        </Card>
+          <p className="text-sm text-gray-600 mt-1">{avgGoalProgress}% avg progress</p>
+        </div>
 
-        <Card>
-          <h3 className="text-gray-500 text-sm font-semibold uppercase">
+        <div className="rounded-xl border border-blue-100/60 bg-white/70 backdrop-blur-sm shadow-sm p-5 hover:shadow-md transition">
+          <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wide">
             Upcoming Events
           </h3>
-          <p className="text-4xl font-bold text-purple-600 mt-2">
+          <p className="text-4xl font-bold mt-2 text-indigo-600">
             {upcomingEvents}
           </p>
           <p className="text-sm text-gray-600 mt-1">in your calendar</p>
-        </Card>
+        </div>
 
-        <Card>
-          <h3 className="text-gray-500 text-sm font-semibold uppercase">
+        <div className="rounded-xl border border-blue-100/60 bg-white/70 backdrop-blur-sm shadow-sm p-5 hover:shadow-md transition">
+          <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wide">
             Weekly Activity
           </h3>
-          <p className="text-4xl font-bold text-orange-600 mt-2">
+          <p className="text-4xl font-bold mt-2 text-amber-600">
             {trendData.reduce((sum, d) => sum + d.events, 0)}
           </p>
           <p className="text-sm text-gray-600 mt-1">events this week</p>
-        </Card>
+        </div>
       </div>
 
       {/* Phase 1: Intelligent Suggestions */}
-      <Card>
+      <div className="rounded-2xl border border-blue-100/60 bg-white/70 backdrop-blur-sm shadow-sm p-5">
         <IntelligentSuggestions
           suggestions={intelligentSuggestions}
           loading={intelligentLoading}
           onRefresh={() => fetchIntelligentSuggestionsData(true)}
         />
-      </Card>
+      </div>
 
-      {/* Weekly Trend Chart */}
-      <Card>
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          📊 Weekly Activity Trend
-        </h2>
-        <ResponsiveContainer width="100%" height={250}>
+      {/* Weekly Trend Chart (kept original UI) */}
+      <div className="rounded-2xl border border-blue-100/60 bg-white/70 backdrop-blur-sm shadow-sm p-5">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Weekly Activity Trend</h2>
+        <ResponsiveContainer width="100%" height={260}>
           <LineChart data={trendData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="day" />
             <YAxis />
             <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="events"
-              stroke="#8884d8"
-              strokeWidth={2}
-            />
+            {/* Keeping stroke default to avoid functional/UI regressions */}
+            <Line type="monotone" dataKey="events" stroke="#8884d8" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
-      </Card>
+      </div>
     </div>
   );
 }
