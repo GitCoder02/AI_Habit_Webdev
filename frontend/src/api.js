@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000/api",
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000/api", // ✅ Has /api
 });
 
 // attach token
@@ -18,16 +18,15 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
-      // optional: redirect to login
       window.location.href = "/login";
     }
     return Promise.reject(err);
   }
 );
 
-// helper wrappers
+// helper wrappers - NO /api prefix (baseURL already has it)
 export const authApi = {
-  login: (data) => api.post("/auth/login", data),
+  login: (data) => api.post("/auth/login", data),      // ✅ No /api prefix
   register: (data) => api.post("/auth/register", data),
   fetchMe: () => api.get("/me"),
 };
@@ -49,7 +48,6 @@ export const goalsApi = {
 export const habitsApi = {
   list: () => api.get("/habits"),
   create: (payload) => api.post("/habits", payload),
-  // CHANGED: use /complete endpoint (backend uses /:id/complete)
   toggle: (id) => api.put(`/habits/${id}/complete`),
   update: (id, payload) => api.put(`/habits/${id}`, payload),
   remove: (id) => api.delete(`/habits/${id}`),
@@ -66,21 +64,21 @@ export const dashboardApi = {
 };
 
 /**
- * AI API: suggestions, peakHours, execute
- * - suggestions() returns axios response of GET /api/ai/suggestions
- * - peakHours() returns GET /api/ai/peak-hours
- * - execute(action) posts an action object to server to apply suggestion
+ * AI API: suggestions, intelligentSuggestions, peakHours, execute
  */
 export const aiApi = {
+  // Original suggestions endpoint
   suggestions: () => api.get("/ai/suggestions"),
+  
+  // NEW: Phase 1 Intelligent Suggestions
+  intelligentSuggestions: (refresh = false) => 
+    api.get("/ai/intelligent-suggestions", { params: { refresh } }),
+  
   peakHours: () => api.get("/ai/peak-hours"),
-  /**
-   * action: { action: "reschedule"|"reduce_frequency"|"create_microtask"|"suggest_block", payload: {...} }
-   */
   execute: (action) => api.post("/ai/execute", { action }),
 };
 
-// Backwards-compatible helper functions (used elsewhere)
+// Backwards-compatible helper functions
 export async function fetchAISuggestions() {
   const res = await api.get("/ai/suggestions");
   return res.data;
@@ -88,6 +86,12 @@ export async function fetchAISuggestions() {
 
 export async function fetchAIPeakHours() {
   const res = await api.get("/ai/peak-hours");
+  return res.data;
+}
+
+// NEW: Helper for intelligent suggestions
+export async function fetchIntelligentSuggestions(refresh = false) {
+  const res = await api.get("/ai/intelligent-suggestions", { params: { refresh } });
   return res.data;
 }
 

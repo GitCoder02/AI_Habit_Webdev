@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../api";
+import { authApi } from "../api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -10,11 +10,9 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post("/auth/login", { email, password });
-      
+      const res = await authApi.login({ email, password });
       login(res.data.token, res.data.user);
-
-      window.location.href = "/dashboard"; // redirect to dashboard
+      window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);
       alert("Login failed! Please check your credentials.");
@@ -63,7 +61,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-gray-500 text-sm">
-          Don’t have an account? <a href="/signup" className="text-mint-green hover:underline">Sign Up</a>
+          Don't have an account? <a href="/signup" className="text-mint-green hover:underline">Sign Up</a>
         </p>
       </div>
     </div>

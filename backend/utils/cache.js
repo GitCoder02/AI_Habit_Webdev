@@ -1,7 +1,7 @@
 // backend/utils/cache.js
-const LRU = require("lru-cache");
+const { LRUCache } = require("lru-cache");
 
-const cache = new LRU({
+const cache = new LRUCache({
   max: 500,
   ttl: 1000 * 60 * 60 // 1 hour default TTL
 });

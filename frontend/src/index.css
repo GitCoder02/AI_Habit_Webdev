@@ -33,3 +33,33 @@ button:hover {
 input:focus, select:focus {
     transform: scale(1.01);
 }
+
+/* Add to the end of frontend/src/index.css */
+
+/* Typing indicator animation delays */
+.animate-bounce.delay-100 {
+  animation-delay: 100ms;
+}
+
+.animate-bounce.delay-200 {
+  animation-delay: 200ms;
+}
+
+/* Smooth scrollbar for chat */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #31B7BA;
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #26949E;
+}
