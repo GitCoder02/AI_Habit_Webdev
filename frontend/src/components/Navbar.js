@@ -1,6 +1,7 @@
 // frontend/src/components/Navbar.js
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
   const { logout } = useAuth();
@@ -24,7 +25,14 @@ export default function Navbar() {
         <NavLink to="/habits" className={linkClass}>Habits</NavLink>
         <NavLink to="/goals" className={linkClass}>Goals</NavLink>
         <NavLink to="/calendar" className={linkClass}>Calendar</NavLink>
-        <button onClick={handleLogout} className="text-red-500 hover:text-red-700 transition">
+        
+        {/* Notification Bell */}
+        <NotificationBell />
+        
+        <button 
+          onClick={handleLogout} 
+          className="text-red-500 hover:text-red-700 transition"
+        >
           Logout
         </button>
       </div>

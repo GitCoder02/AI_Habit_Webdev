@@ -95,4 +95,16 @@ export async function fetchIntelligentSuggestions(refresh = false) {
   return res.data;
 }
 
+/**
+ * Notifications API
+ */
+export const notificationsApi = {
+  list: (unreadOnly = false) => api.get('/notifications', { params: { unreadOnly } }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/mark-all-read'),
+  delete: (id) => api.delete(`/notifications/${id}`),
+  triggerAnalysis: () => api.post('/notifications/trigger-analysis'), // For testing
+};
+
 export default api;

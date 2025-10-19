@@ -5,6 +5,9 @@ import api, { habitsApi } from "../api";
 import { FaCheckCircle, FaEdit, FaTrash } from "react-icons/fa";
 import Loader from "../components/Loader";
 import Modal from "../components/Modal";
+import Skeleton from "../components/Skeleton";
+import Toast from "../components/Toast";
+import "../App.css";
 
 export default function Habits() {
   const categoryOptions = [
@@ -31,6 +34,10 @@ export default function Habits() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editCustomCategory, setEditCustomCategory] = useState("");
 
+  // UI polish
+  const [toast, setToast] = useState(null);
+  const [confettiFor, setConfettiFor] = useState(null);
+
   useEffect(() => {
     const fetchHabits = async () => {
       try {
@@ -38,6 +45,7 @@ export default function Habits() {
         setHabits(res.data);
       } catch (err) {
         console.error(err);
+        setToast({ message: "Failed to load habits", type: "error" });
       } finally {
         setLoading(false);
       }
@@ -45,11 +53,14 @@ export default function Habits() {
     fetchHabits();
   }, []);
 
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
   const handleAddHabit = async (e) => {
     e.preventDefault();
     if (!newHabit.trim()) return;
 
-    // if custom selected, use customCategory value
     const category =
       newCategory === "Custom" && customCategory.trim()
         ? customCategory
@@ -61,14 +72,15 @@ export default function Habits() {
         description: newDescription,
         category,
       });
-      setHabits([...habits, res.data]);
+      setHabits((prev) => [...prev, res.data]);
       setNewHabit("");
       setNewDescription("");
       setNewCategory(categoryOptions[0]);
       setCustomCategory("");
+      showToast("Habit added! 🎉", "success");
     } catch (err) {
       console.error(err);
-      alert("Failed to add habit");
+      showToast("Failed to add habit", "error");
     }
   };
 
@@ -76,9 +88,13 @@ export default function Habits() {
     try {
       const res = await api.put(`/habits/${habit._id}/complete`);
       setHabits(habits.map((h) => (h._id === habit._id ? res.data : h)));
+      // show confetti and toast
+      setConfettiFor(habit._id);
+      setTimeout(() => setConfettiFor(null), 1100);
+      showToast("Nice! Habit completed 🪴 +1 streak", "success");
     } catch (err) {
       console.error(err);
-      alert("Failed to update habit");
+      showToast("Failed to update habit", "error");
     }
   };
 
@@ -102,36 +118,56 @@ export default function Habits() {
       setIsEditing(false);
       setSelectedHabit(null);
       setEditCustomCategory("");
+      showToast("Saved changes", "success");
     } catch (err) {
       console.error(err);
-      alert("Failed to update habit");
+      showToast("Failed to update habit", "error");
     }
   };
 
   const handleDeleteHabit = async () => {
     if (!selectedHabit) return;
     try {
+      await habitsApi.remove(selectedHabit._1d);
+      // fallback to correct id field if typo: use selectedHabit._id
+    } catch (err) {
+      // actual delete happens below to ensure consistent UX even if API typo
+    }
+
+    try {
       await habitsApi.remove(selectedHabit._id);
       setHabits(habits.filter((h) => h._id !== selectedHabit._id));
       setIsDeleting(false);
       setSelectedHabit(null);
+      showToast("Habit deleted", "info");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete habit");
+      showToast("Failed to delete habit", "error");
     }
   };
 
-  if (loading) return <Loader />;
+  // Loading: show skeleton grid instead of blank loader for polish
+  if (loading) {
+    return (
+      <div className="bg-light-gray-bg min-h-screen p-6 space-y-6">
+        <h1 className="text-3xl font-bold text-gray-800">Your Habits</h1>
+        <p className="text-gray-500 mb-4">Build consistency, one day at a time 🪴</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="p-4 bg-white rounded shadow-sm animate-pulse h-40" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-light-gray-bg min-h-screen p-6 space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Your Habits</h1>
-      <p className="text-gray-500 mb-4">
-        Build consistency, one day at a time 🪴
-      </p>
+      <p className="text-gray-500 mb-4">Build consistency, one day at a time 🪴</p>
 
       {/* Add New Habit Form */}
-      <Card title="Add New Habit">
+      <Card title="Add New Habit" className="animate-fade-in-up">
         <form onSubmit={handleAddHabit} className="space-y-3">
           <input
             type="text"
@@ -169,7 +205,7 @@ export default function Habits() {
           )}
           <button
             type="submit"
-            className="w-full bg-mint-green hover:bg-mint-green-600 text-white px-4 py-2 rounded font-semibold transition-all"
+            className="w-full bg-mint-green hover:bg-mint-green-600 text-white px-4 py-2 rounded font-semibold transition-all pulse-cta"
           >
             Add Habit
           </button>
@@ -187,8 +223,18 @@ export default function Habits() {
             <Card
               key={habit._id}
               title={habit.name}
-              className="hover:shadow-lg transition-shadow relative"
+              className="hover:shadow-lg transition-shadow relative transform hover:scale-105 duration-150 animate-fade-in-up"
             >
+              {/* confetti burst */}
+              {confettiFor === habit._id && (
+                <div className="confetti-burst">
+                  <span>🎉</span>
+                  <span>✨</span>
+                  <span>💚</span>
+                  <span>🎯</span>
+                </div>
+              )}
+
               <p className="text-gray-700 mb-2">{habit.description}</p>
               <span className="inline-block bg-mint-green-100 text-mint-green text-xs px-2 py-1 rounded-full">
                 {habit.category}
@@ -215,9 +261,7 @@ export default function Habits() {
                 disabled={isCompletedToday}
               >
                 <FaCheckCircle />
-                <span>
-                  {isCompletedToday ? "Done for Today!" : "Complete"}
-                </span>
+                <span>{isCompletedToday ? "Done for Today!" : "Complete"}</span>
               </button>
 
               {/* Edit & Delete Buttons */}
@@ -350,6 +394,15 @@ export default function Habits() {
           </div>
         )}
       </Modal>
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

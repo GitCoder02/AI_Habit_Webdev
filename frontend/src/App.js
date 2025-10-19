@@ -3,8 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Loader from "./components/Loader";
-import ChatCoach from "./components/ChatCoach"; // NEW
-import ChatButton from "./components/ChatButton"; // NEW
+import ChatCoach from "./components/ChatCoach";
+import ChatButton from "./components/ChatButton";
+//import TestPanel from "./components/TestPanel"; // ✅ ADD THIS
 import { Suspense, lazy, useState } from "react";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -57,10 +58,12 @@ function AppRoutes() {
         </Routes>
       </Suspense>
 
+      {/* Chat Coach & Test Panel (only show when authenticated) */}
       {isAuthenticated && (
         <>
           <ChatButton onClick={() => setIsChatOpen(true)} />
           <ChatCoach isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+          {/*<TestPanel />*/} {/* ✅ ADD THIS */}
         </>
       )}
     </Router>

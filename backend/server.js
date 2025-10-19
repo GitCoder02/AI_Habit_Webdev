@@ -18,6 +18,14 @@ const eventsRoutes = require('./routes/events');
 const googleRoutes = require('./routes/google');
 const dashboardRoutes = require('./routes/dashboard');
 const aiRoutes = require('./routes/ai');
+const notificationRoutes = require('./routes/notifications');
+const testRoutes = require('./routes/test');
+
+// Import services
+const chatCoachService = require('./services/chatCoachService');
+
+// Import jobs
+const { startDailyAnalysis } = require('./jobs/dailyAnalysis');
 
 const app = express();
 const server = http.createServer(app);
@@ -33,6 +41,9 @@ const io = new Server(server, {
   transports: ['websocket', 'polling']
 });
 
+// Make io globally accessible for notification emissions
+global.io = io;
+
 // Middlewares
 app.use(express.json());
 app.use(helmet());
@@ -44,30 +55,31 @@ app.use(cors({
 // MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
+  .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
 
-// REST API Routes - MAKE SURE THESE ARE CORRECT
-app.use('/api/auth', authRoutes);              // ✅ /api/auth/login
-app.use('/api', protectedRoutes);              // ✅ /api/protected
-app.use('/api/habits', habitRoutes);           // ✅ /api/habits
-app.use('/api/goals', goalsRoutes);            // ✅ /api/goals
-app.use('/api/events', eventsRoutes);          // ✅ /api/events
-app.use('/api/google', googleRoutes);          // ✅ /api/google
-app.use('/api/dashboard', dashboardRoutes);    // ✅ /api/dashboard
-app.use('/api/ai', aiRoutes);                  // ✅ /api/ai
+// REST API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api', protectedRoutes);
+app.use('/api/habits', habitRoutes);
+app.use('/api/goals', goalsRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/google', googleRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/test', testRoutes);
 
 app.get('/', (_req, res) => res.send('Habit Coach API'));
 
-// Socket.io Chat
-const chatCoachService = require('./services/chatCoachService');
-
+// ========== SOCKET.IO HANDLERS ==========
 io.on('connection', (socket) => {
   console.log('✅ [Socket.io] Client connected:', socket.id);
 
+  // ===== AUTHENTICATION =====
   socket.on('authenticate', async (token) => {
     try {
       if (!token) {
@@ -84,6 +96,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== CHAT HANDLERS =====
   socket.on('chatMessage', async (data) => {
     try {
       if (!socket.userId) {
@@ -128,14 +141,29 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== NOTIFICATION HANDLERS (PHASE 3) =====
+  socket.on('subscribeNotifications', () => {
+    if (!socket.userId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+    // Join user-specific room for targeted notifications
+    socket.join(`user:${socket.userId}`);
+    console.log(`✅ [Socket.io] User ${socket.userId} subscribed to notifications`);
+  });
+
+  // ===== DISCONNECT =====
   socket.on('disconnect', (reason) => {
     console.log('❌ [Socket.io] Disconnected:', socket.id, 'Reason:', reason);
   });
 });
 
-// Start server
+// ========== START SERVER ==========
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('Socket.io ready for connections');
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log('✅ Socket.io ready for connections');
+  
+  // Start daily analysis cron job (Phase 3)
+  startDailyAnalysis();
 });
